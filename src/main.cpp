@@ -53,10 +53,22 @@ int main(){
         return 1;
     }
 
-    const char* message = "TCP connection established!\n"; //sending this message to the client
+    char buffer[1024]; //container where the received data is stored
+    ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0); //recv() is a system call that receives data from connected socket
 
-    if(send(client_fd, message, std::strlen(message),0) == -1){ //send() can succesfully send fewer bytes than requested. Our initial code checks for outright failure (-1) but doesnt handle partial writes.
-        perror("send");
+    if(bytes_received > 0){
+        std::cout<<"Received "<< bytes_received << "bytes\n";
+
+        std::cout.write(buffer, bytes_received);
+        std::cout<<'\n'; 
+
+        const char* message = "Data received successfully!\n";
+        send(client_fd, message, std::strlen(message), 0);
+    }
+    else if (bytes_received == 0){
+        std::cout<<"Client disconnected\n";
+    }else{
+        perror("recv");
     }
 
     close(client_fd); //closes the accepted connection
