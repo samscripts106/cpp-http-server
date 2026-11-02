@@ -54,22 +54,31 @@ int main(){
     }
 
     char buffer[1024]; //container where the received data is stored
-    ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0); //recv() is a system call that receives data from connected socket
+    ssize_t total_received = 0;
 
-    if(bytes_received > 0){
-        std::cout<<"Received "<< bytes_received << "bytes\n";
+    //Instead of calling onr recv() we repeatedly call it until the client closes its sending direction
+    while(true){
+        ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0); //recv() is a system call that receives data from connected socket
 
-        std::cout.write(buffer, bytes_received);
-        std::cout<<'\n'; 
+        if(bytes_received > 0){ //We got the data, process it and continue reading
+            total_received += bytes_received;
+            std::cout.write(buffer,bytes_received);
+            continue;
+        }
 
-        const char* message = "Data received successfully!\n";
-        send(client_fd, message, std::strlen(message), 0);
-    }
-    else if (bytes_received == 0){
-        std::cout<<"Client disconnected\n";
-    }else{
+        if(bytes_received == 0){ //The client has shut down its sending direction
+            std::cout << "\nClient finished sending data.\n";
+            break;
+        }
+
         perror("recv");
+        break;
     }
+
+    std::cout<<"Total bytes received: "<<total_received<<'\n';
+
+    const char* message = "Data received successfully!\n";
+    send(client_fd, message, std::strlen(message), 0);
 
     close(client_fd); //closes the accepted connection
     close(server_fd); //closes the listening socket
