@@ -1,9 +1,11 @@
 #include <iostream>
+#include <string>
 #include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <sstream>
 
 int main(){
     int server_fd = socket(AF_INET, SOCK_STREAM, 0); //socket() asks the OS to create a socket and returns an integer identifying it with our process (That integer is a file descriptor (FD)). This descriptor is later used to refer to this socket
@@ -54,34 +56,86 @@ int main(){
     }
 
     char buffer[1024]; //container where the received data is stored
-    ssize_t total_received = 0;
+    // ssize_t total_received = 0;
 
     //Instead of calling onr recv() we repeatedly call it until the client closes its sending direction
-    while(true){
-        ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0); //recv() is a system call that receives data from connected socket
+    // while(true){
+    //     ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0); //recv() is a system call that receives data from connected socket
 
-        if(bytes_received > 0){ //We got the data, process it and continue reading
-            total_received += bytes_received;
-            std::cout.write(buffer,bytes_received);
-            continue;
-        }
+    //     if(bytes_received > 0){ //We got the data, process it and continue reading
+    //         total_received += bytes_received;
+    //         std::cout.write(buffer,bytes_received);
+    //         continue;
+    //     }
 
-        if(bytes_received == 0){ //The client has shut down its sending direction
-            std::cout << "\nClient finished sending data.\n";
-            break;
-        }
+    //     if(bytes_received == 0){ //The client has shut down its sending direction
+    //         std::cout << "\nClient finished sending data.\n";
+    //         break;
+    //     }
 
-        perror("recv");
-        break;
+    //     perror("recv");
+    //     break;
+    // }
+
+    ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
+
+    std::string request(buffer, bytes_received);
+
+    size_t line_end = request.find("\r\n"); //searches the first occurences of \r\n
+
+    if(line_end != std::string::npos){ //
+        std::string request_line = request.substr(0,line_end); //extracts characters starting at index 0, for a length of line_end //Result: GET /users HTTP/1.1
+        std::cout<<"Request Line: "<<request_line<<'\n'; 
+
+        std::istringstream iss(request_line); //Allows us to read a string as though it were an input stream
+
+        std::string method;
+        std::string path;
+        std::string version;
+
+        iss >> method >> path >> version; //>> operator extracts whitespace-separated tokens
+
+        std::cout << "Method: " << method << '\n';
+        std::cout << "Path: " << path << '\n';
+        std::cout << "Version: " << version << '\n';
     }
 
-    std::cout<<"Total bytes received: "<<total_received<<'\n';
+    if (bytes_received > 0) {
+        std::cout.write(buffer, bytes_received);
+        std::cout << '\n';
+    }
 
-    const char* message = "Data received successfully!\n";
-    send(client_fd, message, std::strlen(message), 0);
+    std::string body = "Hello, world!";
 
-    close(client_fd); //closes the accepted connection
-    close(server_fd); //closes the listening socket
+    std::string response =
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: text/plain\r\n"
+        "Content-Length: " + std::to_string(body.size()) + "\r\n"
+        "Connection: close\r\n"
+        "\r\n" +
+        body;
+
+    send(client_fd, response.c_str(), response.size(), 0);
+
+    close(client_fd);
+    close(server_fd);
+
+
+
+    // std::string body = "Hello World!";
+
+    // std::string response = 
+    // "HTTP/1.1 200 OK\r\n" 
+    // "Content-Type: text/plain\r\n"
+    // "Content-Length: " + std::to_string(body.size()) + "\r\n" //Content-Length must be represnted as text in the response header
+    // "Connection: close\r\n"
+    // "\r\n" + 
+    // body;
+
+    // send(client_fd, response.c_str(), response.size(), 0); //c.str() gives us a pointer to the contents of the string
+
+    // close(client_fd); //closes the accepted connection
+    // close(server_fd); //closes the listening socket
 
     return 0;
 }
