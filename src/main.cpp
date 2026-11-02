@@ -6,6 +6,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <sstream>
+#include <unordered_map>
 
 int main(){
     int server_fd = socket(AF_INET, SOCK_STREAM, 0); //socket() asks the OS to create a socket and returns an integer identifying it with our process (That integer is a file descriptor (FD)). This descriptor is later used to refer to this socket
@@ -55,37 +56,63 @@ int main(){
         return 1;
     }
 
-    char buffer[1024]; //container where the received data is stored
-    // ssize_t total_received = 0;
-
-    //Instead of calling onr recv() we repeatedly call it until the client closes its sending direction
-    // while(true){
-    //     ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0); //recv() is a system call that receives data from connected socket
-
-    //     if(bytes_received > 0){ //We got the data, process it and continue reading
-    //         total_received += bytes_received;
-    //         std::cout.write(buffer,bytes_received);
-    //         continue;
-    //     }
-
-    //     if(bytes_received == 0){ //The client has shut down its sending direction
-    //         std::cout << "\nClient finished sending data.\n";
-    //         break;
-    //     }
-
-    //     perror("recv");
-    //     break;
-    // }
+    char buffer[1024];
 
     ssize_t bytes_received = recv(client_fd, buffer, sizeof(buffer), 0);
 
+    if (bytes_received <= 0) {
+        std::cerr << "Failed to receive request\n";
+        close(client_fd);
+        close(server_fd);
+        return 1;
+    }
+
     std::string request(buffer, bytes_received);
+    //HTTP req string:
+    // GET /users HTTP/1.1\r\n
+    //Host: 127.0.0.1:8080\r\n
+    //User-Agent: curl/8.16.0\r\n
+    //Accept: */*\r\n
+    //\r\n
 
     size_t line_end = request.find("\r\n"); //searches the first occurences of \r\n
+
+    size_t headers_end = request.find("\r\n\r\n"); //\r\n\r\n identifies the boundary between headers and the optional request body
 
     if(line_end != std::string::npos){ //
         std::string request_line = request.substr(0,line_end); //extracts characters starting at index 0, for a length of line_end //Result: GET /users HTTP/1.1
         std::cout<<"Request Line: "<<request_line<<'\n'; 
+
+        if(headers_end != std::string::npos){
+            std::string headers = request.substr(line_end+2, headers_end - (line_end+2));
+
+            std::unordered_map<std::string, std::string> header_map; //stores key-value pairs of header names & values
+            std::istringstream header_stream(headers); //lets us read headers line by line
+            std::string header_line; //temporarily holds each line
+
+            while (std::getline(header_stream, header_line)){ //Iterate through each headers
+                size_t colon_pos = header_line.find(':');
+
+                if(colon_pos != std::string::npos){
+                    std::string key = header_line.substr(0, colon_pos);
+                    std::string value = header_line.substr(colon_pos+1);
+
+                    //Whitespace trimming
+                    size_t start = value.find_first_not_of(" \t");
+                    size_t end = value.find_last_not_of(" \t");
+
+                    value = (start == std::string::npos)? "" : value.substr(start, end-start+1);
+
+                    header_map[key] = value;
+                }
+            }
+
+            for (const auto& [key, value] : header_map) {
+                std::cout << key << " = " << value << '\n';
+            }
+
+            std::cout<<"Headers:\n"<<headers<<'\n';
+        }
 
         std::istringstream iss(request_line); //Allows us to read a string as though it were an input stream
 
@@ -93,16 +120,13 @@ int main(){
         std::string path;
         std::string version;
 
-        iss >> method >> path >> version; //>> operator extracts whitespace-separated tokens
+        if (!(iss >> method >> path >> version)){
+            std::cerr << "Invalid HTTP request line\n";
+        } //>> operator extracts whitespace-separated tokens
 
         std::cout << "Method: " << method << '\n';
         std::cout << "Path: " << path << '\n';
         std::cout << "Version: " << version << '\n';
-    }
-
-    if (bytes_received > 0) {
-        std::cout.write(buffer, bytes_received);
-        std::cout << '\n';
     }
 
     std::string body = "Hello, world!";
@@ -119,23 +143,6 @@ int main(){
 
     close(client_fd);
     close(server_fd);
-
-
-
-    // std::string body = "Hello World!";
-
-    // std::string response = 
-    // "HTTP/1.1 200 OK\r\n" 
-    // "Content-Type: text/plain\r\n"
-    // "Content-Length: " + std::to_string(body.size()) + "\r\n" //Content-Length must be represnted as text in the response header
-    // "Connection: close\r\n"
-    // "\r\n" + 
-    // body;
-
-    // send(client_fd, response.c_str(), response.size(), 0); //c.str() gives us a pointer to the contents of the string
-
-    // close(client_fd); //closes the accepted connection
-    // close(server_fd); //closes the listening socket
 
     return 0;
 }
