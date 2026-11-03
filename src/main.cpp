@@ -7,6 +7,15 @@
 #include <unistd.h>
 #include <sstream>
 #include <unordered_map>
+#include <algorithm>
+#include <cctype>
+
+struct HttpRequest{
+    std::string method;
+    std::string path;
+    std::string version;
+    std::unordered_map<std::string, std::string> headers;
+};
 
 int main(){
     int server_fd = socket(AF_INET, SOCK_STREAM, 0); //socket() asks the OS to create a socket and returns an integer identifying it with our process (That integer is a file descriptor (FD)). This descriptor is later used to refer to this socket
@@ -75,13 +84,20 @@ int main(){
     //Accept: */*\r\n
     //\r\n
 
+    HttpRequest parsed_request;
+
     size_t line_end = request.find("\r\n"); //searches the first occurences of \r\n
 
     size_t headers_end = request.find("\r\n\r\n"); //\r\n\r\n identifies the boundary between headers and the optional request body
 
     if(line_end != std::string::npos){ //
         std::string request_line = request.substr(0,line_end); //extracts characters starting at index 0, for a length of line_end //Result: GET /users HTTP/1.1
-        std::cout<<"Request Line: "<<request_line<<'\n'; 
+
+        std::istringstream iss(request_line); //Allows us to read a string as though it were an input stream
+
+        if (!(iss >> parsed_request.method >> parsed_request.path >> parsed_request.version)) {
+            std::cerr << "Invalid HTTP request line\n";
+        } //>> operator extracts whitespace-separated tokens
 
         if(headers_end != std::string::npos){
             std::string headers = request.substr(line_end+2, headers_end - (line_end+2));
@@ -95,6 +111,9 @@ int main(){
 
                 if(colon_pos != std::string::npos){
                     std::string key = header_line.substr(0, colon_pos);
+                    std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c){
+                        return std::tolower(c);
+                    }); //converts every character of key to lowercase thus eradicating redundancy
                     std::string value = header_line.substr(colon_pos+1);
 
                     //Whitespace trimming
@@ -103,30 +122,18 @@ int main(){
 
                     value = (start == std::string::npos)? "" : value.substr(start, end-start+1);
 
-                    header_map[key] = value;
+                    parsed_request.headers[key] = value;
                 }
             }
+        }  
+    }
 
-            for (const auto& [key, value] : header_map) {
+    std::cout << "Method: " << parsed_request.method << '\n';
+    std::cout << "Path: " << parsed_request.path << '\n';
+    std::cout << "Version: " << parsed_request.version << '\n';
+
+    for (const auto& [key, value] : parsed_request.headers) {
                 std::cout << key << " = " << value << '\n';
-            }
-
-            std::cout<<"Headers:\n"<<headers<<'\n';
-        }
-
-        std::istringstream iss(request_line); //Allows us to read a string as though it were an input stream
-
-        std::string method;
-        std::string path;
-        std::string version;
-
-        if (!(iss >> method >> path >> version)){
-            std::cerr << "Invalid HTTP request line\n";
-        } //>> operator extracts whitespace-separated tokens
-
-        std::cout << "Method: " << method << '\n';
-        std::cout << "Path: " << path << '\n';
-        std::cout << "Version: " << version << '\n';
     }
 
     std::string body = "Hello, world!";
