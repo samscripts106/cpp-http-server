@@ -9,13 +9,9 @@
 #include <unordered_map>
 #include <algorithm>
 #include <cctype>
-
-struct HttpRequest{
-    std::string method;
-    std::string path;
-    std::string version;
-    std::unordered_map<std::string, std::string> headers;
-};
+#include "http/HttpRequest.hpp"
+#include "http/HttpParser.hpp"
+#include "http/HttpResponse.hpp"
 
 int main(){
     int server_fd = socket(AF_INET, SOCK_STREAM, 0); //socket() asks the OS to create a socket and returns an integer identifying it with our process (That integer is a file descriptor (FD)). This descriptor is later used to refer to this socket
@@ -78,55 +74,13 @@ int main(){
 
     std::string request(buffer, bytes_received);
     //HTTP req string:
-    // GET /users HTTP/1.1\r\n
+    //GET /users HTTP/1.1\r\n
     //Host: 127.0.0.1:8080\r\n
     //User-Agent: curl/8.16.0\r\n
     //Accept: */*\r\n
     //\r\n
 
-    HttpRequest parsed_request;
-
-    size_t line_end = request.find("\r\n"); //searches the first occurences of \r\n
-
-    size_t headers_end = request.find("\r\n\r\n"); //\r\n\r\n identifies the boundary between headers and the optional request body
-
-    if(line_end != std::string::npos){ //
-        std::string request_line = request.substr(0,line_end); //extracts characters starting at index 0, for a length of line_end //Result: GET /users HTTP/1.1
-
-        std::istringstream iss(request_line); //Allows us to read a string as though it were an input stream
-
-        if (!(iss >> parsed_request.method >> parsed_request.path >> parsed_request.version)) {
-            std::cerr << "Invalid HTTP request line\n";
-        } //>> operator extracts whitespace-separated tokens
-
-        if(headers_end != std::string::npos){
-            std::string headers = request.substr(line_end+2, headers_end - (line_end+2));
-
-            std::unordered_map<std::string, std::string> header_map; //stores key-value pairs of header names & values
-            std::istringstream header_stream(headers); //lets us read headers line by line
-            std::string header_line; //temporarily holds each line
-
-            while (std::getline(header_stream, header_line)){ //Iterate through each headers
-                size_t colon_pos = header_line.find(':');
-
-                if(colon_pos != std::string::npos){
-                    std::string key = header_line.substr(0, colon_pos);
-                    std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c){
-                        return std::tolower(c);
-                    }); //converts every character of key to lowercase thus eradicating redundancy
-                    std::string value = header_line.substr(colon_pos+1);
-
-                    //Whitespace trimming
-                    size_t start = value.find_first_not_of(" \t");
-                    size_t end = value.find_last_not_of(" \t");
-
-                    value = (start == std::string::npos)? "" : value.substr(start, end-start+1);
-
-                    parsed_request.headers[key] = value;
-                }
-            }
-        }  
-    }
+    HttpRequest parsed_request = parsedRequest(request);
 
     std::cout << "Method: " << parsed_request.method << '\n';
     std::cout << "Path: " << parsed_request.path << '\n';
@@ -136,17 +90,12 @@ int main(){
                 std::cout << key << " = " << value << '\n';
     }
 
-    std::string body = "Hello, world!";
+    HttpResponse response;
+    response.body = "Hello, world!";
 
-    std::string response =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/plain\r\n"
-        "Content-Length: " + std::to_string(body.size()) + "\r\n"
-        "Connection: close\r\n"
-        "\r\n" +
-        body;
+    std::string response_data = response.toString();
 
-    send(client_fd, response.c_str(), response.size(), 0);
+    send(client_fd, response_data.c_str(), response_data.size(), 0);
 
     close(client_fd);
     close(server_fd);
