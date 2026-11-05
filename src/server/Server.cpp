@@ -80,7 +80,16 @@ void Server::handleClient(int client_fd) {
     std::cout<<"Request Body: "<<body<<'\n';
 
     HttpResponse response;
-    response.body = "Hello, world!";
+    
+    if(parsed_request.path == "/"){
+        response.body = "Welcome to my C++ Server!";
+    }else if (parsed_request.path == "/hello"){
+        response.body = "Hello there!";
+    }else{
+        response.status_code = 404;
+        response.status_message = "Not Found";
+        response.body = "404 - Page Not Found";
+    }
 
     std::string response_data = response.toString();
 
