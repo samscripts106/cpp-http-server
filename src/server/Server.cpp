@@ -86,7 +86,7 @@ void Server::handleClient(int client_fd) {
     send(client_fd, response_data.c_str(), response_data.size(), 0);
 }
 
-//ACCEPTS A CLIENT AND MANAGES THE SERVER'S LIFECYCLE
+//SEQUENTIAL HANDLING OF MULTIPLE CLIENTS (Aceept Client1 -> Handle Client1 -> Close Client1 -> Accept Client2 -> Handle Client2 -> Close Client2 -> Repeat)
 void Server::start(){
     int server_fd = createSocket();
 
@@ -94,17 +94,17 @@ void Server::start(){
 
     std::cout<<"Server listening on 127.0.0.1:8080\n";
 
-    int client_fd = accept(server_fd, nullptr, nullptr);
+    while(true){
+        int client_fd = accept(server_fd, nullptr, nullptr);
 
-    if(client_fd == -1){
-        perror("accept");
-        close(server_fd);
-        return;
+        if(client_fd == -1){
+            perror("accept");
+            continue;
+        }
+
+        handleClient(client_fd);
+        close(client_fd);
     }
-
-    handleClient(client_fd);
-
-    close(client_fd);
     close(server_fd);
 }
 
