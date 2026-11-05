@@ -1,19 +1,37 @@
 #include "router/Router.hpp"
 
-HttpResponse Router::route(const HttpRequest& request) {
+Router::Router() { //registers the routes
+    routes["GET /"] = [](const HttpRequest& request) {
+        HttpResponse response;
+        response.body = "Welcome to my C++ server!";
+        return response;
+    };
+
+    routes["GET /hello"] = [](const HttpRequest& request) {
+        HttpResponse response;
+        response.body = "Hello there!";
+        return response;
+    };
+
+    routes["POST /hello"] = [](const HttpRequest& request) {
+        HttpResponse response;
+        response.body = "POST Request received!";
+        return response;
+    };
+}
+
+HttpResponse Router::route(const HttpRequest& request) { //searches for a matching route and executes its handler
+    std::string key = request.method+" "+request.path; //Construct the key eg: "GET /hello"
+
+    auto it = routes.find(key); //find the route in the unordered map
+
+    if(it != routes.end()) return it->second(request); //executes that handler with the request (it.second is the handler function)
+
     HttpResponse response;
 
-    if (request.path == "/") {
-        response.body = "Welcome to my C++ server!";
-    }
-    else if (request.path == "/hello") {
-        response.body = "Hello there!";
-    }
-    else {
-        response.status_code = 404;
-        response.status_message = "Not Found";
-        response.body = "404 - Page Not Found";
-    }
+    response.status_code = 404;
+    response.status_message = "Not Found";
+    response.body = "404 - Page Not Found";
 
     return response;
 }
