@@ -12,4 +12,5 @@ private:
     void handleClient(int client_fd);
     std::string readRequest(int client_fd);
     Router router;
+    bool sendAll (int client_fd, const std::string& data);
 };

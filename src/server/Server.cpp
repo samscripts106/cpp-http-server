@@ -83,7 +83,9 @@ void Server::handleClient(int client_fd) {
 
     std::string response_data = response.toString();
 
-    send(client_fd, response_data.c_str(), response_data.size(), 0);
+    if(!sendAll(client_fd, response_data)){
+        std::cerr<<"Failed to send response\n";
+    }
 }
 
 //SEQUENTIAL HANDLING OF MULTIPLE CLIENTS (Aceept Client1 -> Handle Client1 -> Close Client1 -> Accept Client2 -> Handle Client2 -> Close Client2 -> Repeat)
@@ -151,5 +153,18 @@ std::string Server::readRequest(int client_fd){
 
 void Server::registerRoute(const std::string& method, const std::string& path, Router::Handler handler){ //Receives method, path and handler
     router.registerRoute(method, path, handler); //Constructs the "GET/Hello" & the router stores the handler in the unordred_map
+}
+
+bool Server::sendAll(int client_fd, const std::string& data){
+    size_t total_sent = 0;
+
+    while(total_sent < data.size()){
+        ssize_t bytes_sent = send(client_fd, data.c_str() + total_sent, data.size() - total_sent, 0);
+
+        if(bytes_sent <= 0) return false;
+
+        total_sent += bytes_sent;
+    }
+    return true;
 }
 
