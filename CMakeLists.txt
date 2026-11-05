@@ -11,6 +11,7 @@ add_executable(http_server
     src/http/HttpParser.cpp
     src/http/HttpResponse.cpp
     src/server/Server.cpp
+    src/router/Router.cpp
 )
 
 target_include_directories(http_server PRIVATE include)
