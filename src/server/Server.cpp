@@ -55,6 +55,14 @@ int Server::createSocket() {
 
 //COMMUNICATES WITH THE PARTICULAR CLIENT
 void Server::handleClient(int client_fd) {
+    int option = 1;
+
+    //SO_NOSIGPIPE prevents unexpected killing of the server when any client disconnects
+    if (setsockopt(client_fd, SOL_SOCKET, SO_NOSIGPIPE, &option, sizeof(option)) == -1) {
+        perror("setsockopt SO_NOSIGPIPE");
+        return;
+    }
+
     std::string request = readRequest(client_fd);
 
     if (request.empty()) {
