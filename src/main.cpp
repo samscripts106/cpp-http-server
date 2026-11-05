@@ -16,6 +16,25 @@
 
 int main(){
     Server server;
+
+    server.registerRoute("GET", "/", [](const HttpRequest& request) {
+        HttpResponse response;
+        response.body = "Welcome to my C++ server!";
+        return response;
+    });
+
+    server.registerRoute("GET", "/hello", [](const HttpRequest& request) {
+        HttpResponse response;
+        response.body = "Hello there!";
+        return response;
+    });
+
+    server.registerRoute("POST", "/hello", [](const HttpRequest& request) {
+        HttpResponse response;
+        response.body = "POST Request received!";
+        return response;
+    });
+
     server.start();
 
     return 0;

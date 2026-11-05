@@ -13,6 +13,8 @@ class Router{
     Router();
     
     HttpResponse route(const HttpRequest& request); 
+
+    void registerRoute(const std:: string& method, const std::string& path, Handler handler);
     
     private:
     std::unordered_map<std::string,Handler> routes; //stores a string key mapped to a handler

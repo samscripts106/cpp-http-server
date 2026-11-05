@@ -149,3 +149,7 @@ std::string Server::readRequest(int client_fd){
     return request;
 }
 
+void Server::registerRoute(const std::string& method, const std::string& path, Router::Handler handler){ //Receives method, path and handler
+    router.registerRoute(method, path, handler); //Constructs the "GET/Hello" & the router stores the handler in the unordred_map
+}
+

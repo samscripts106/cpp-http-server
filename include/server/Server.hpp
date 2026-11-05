@@ -5,6 +5,7 @@
 class Server{
 public:
     void start(); //manages the server life cycle
+    void registerRoute(const std::string& method, const std::string& path, Router::Handler handler);
 
 private:
     int createSocket();

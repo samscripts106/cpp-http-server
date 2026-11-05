@@ -1,23 +1,23 @@
 #include "router/Router.hpp"
 
 Router::Router() { //registers the routes
-    routes["GET /"] = [](const HttpRequest& request) {
+    registerRoute("GET", "/", [](const HttpRequest& request) {
         HttpResponse response;
         response.body = "Welcome to my C++ server!";
         return response;
-    };
+    });
 
-    routes["GET /hello"] = [](const HttpRequest& request) {
+    registerRoute("GET", "/hello", [](const HttpRequest& request) {
         HttpResponse response;
         response.body = "Hello there!";
         return response;
-    };
+    });
 
-    routes["POST /hello"] = [](const HttpRequest& request) {
+    registerRoute("POST", "/hello", [](const HttpRequest& request) {
         HttpResponse response;
         response.body = "POST Request received!";
         return response;
-    };
+    });
 }
 
 HttpResponse Router::route(const HttpRequest& request) { //searches for a matching route and executes its handler
@@ -34,4 +34,9 @@ HttpResponse Router::route(const HttpRequest& request) { //searches for a matchi
     response.body = "404 - Page Not Found";
 
     return response;
+}
+
+void Router::registerRoute(const std::string& method, const std::string& path, Handler handler){
+    std::string key = method + " " + path;
+    routes[key] = handler;
 }
