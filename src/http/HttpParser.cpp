@@ -22,6 +22,19 @@ HttpRequest parsedRequest(const std::string& rawRequest){
             return parsed_request;
         } //>> operator extracts whitespace-separated tokens
 
+        //Check for invalid extra tokens in the request line
+        std::string extra;
+        if(iss>>extra){
+            std::cerr<<"Invalid HTTP request line: extra token\n";
+            return parsed_request;
+        }
+
+        //Validate the HTTP version
+        if(parsed_request.version != "HTTP/1.1"){
+            std::cerr<<"Unsupported HTTP version\n";
+            return parsed_request;
+        }
+
         if(headers_end != std::string::npos){
             std::string headers = rawRequest.substr(line_end+2, headers_end - (line_end+2));
 
@@ -47,7 +60,8 @@ HttpRequest parsedRequest(const std::string& rawRequest){
                     parsed_request.headers[key] = value;
                 }
             }
-        }  
+        } 
+        parsed_request.valid = true; 
     }
     return parsed_request;
 }

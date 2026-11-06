@@ -72,6 +72,16 @@ void Server::handleClient(int client_fd) {
 
     HttpRequest parsed_request = parsedRequest(request);
 
+    if (!parsed_request.valid) {
+        HttpResponse response;
+        response.status_code = 400;
+        response.status_message = "Bad Request";
+        response.body = "Bad Request";
+
+        sendAll(client_fd, response.toString());
+        return;
+    }
+
     std::cout << "Method: " << parsed_request.method << '\n';
     std::cout << "Path: " << parsed_request.path << '\n';
     std::cout << "Version: " << parsed_request.version << '\n';
