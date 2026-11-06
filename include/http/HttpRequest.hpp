@@ -9,4 +9,5 @@ struct HttpRequest {
     std::string version;
     std::unordered_map<std::string, std::string> headers;
     bool valid = false;
+    bool unsupported_method = false;
 };

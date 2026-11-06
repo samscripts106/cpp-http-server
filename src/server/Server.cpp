@@ -73,14 +73,21 @@ void Server::handleClient(int client_fd) {
     HttpRequest parsed_request = parsedRequest(request);
 
     if (!parsed_request.valid) {
-        HttpResponse response;
+    HttpResponse response;
+
+    if (parsed_request.unsupported_method) { //for unsupported HTTP methods
+        response.status_code = 405;
+        response.status_message = "Method Not Allowed";
+        response.body = "Method Not Allowed";
+    } else { //for invalid HTTP version or malformed requests
         response.status_code = 400;
         response.status_message = "Bad Request";
         response.body = "Bad Request";
-
-        sendAll(client_fd, response.toString());
-        return;
     }
+
+    sendAll(client_fd, response.toString());
+    return;
+}
 
     std::cout << "Method: " << parsed_request.method << '\n';
     std::cout << "Path: " << parsed_request.path << '\n';

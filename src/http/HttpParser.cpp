@@ -35,6 +35,20 @@ HttpRequest parsedRequest(const std::string& rawRequest){
             return parsed_request;
         }
 
+        //Validate the HTTP method (for time being GEt & POST are only allowed)
+        if (parsed_request.method != "GET" &&
+            parsed_request.method != "POST") {
+            std::cerr << "Unsupported HTTP method\n";
+            parsed_request.unsupported_method = true;
+            return parsed_request;
+        }
+
+        //Validates requested route (rejects hello but accept /hello)
+        if (parsed_request.path.empty() || parsed_request.path[0] != '/') {
+            std::cerr << "Invalid request target\n";
+            return parsed_request;
+        }
+
         if(headers_end != std::string::npos){
             std::string headers = rawRequest.substr(line_end+2, headers_end - (line_end+2));
 
